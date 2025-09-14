@@ -1,0 +1,2 @@
+- Use rapid iteration. Proceed in small increments and validate them.
+- Be mindful of time. If some task required running code for a while, it is fine. But make sure that code does not just run for hours due to some bug. When running any code, have some expectation for how long it should run. If it exceeds this expected time, kill it. No tasks I am aware of is expected to run for longer than 30 minutes.

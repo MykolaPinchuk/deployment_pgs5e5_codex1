@@ -1,0 +1,25 @@
+# Python & venv
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.python-version
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Editors/OS
+.idea/
+.vscode/
+.DS_Store
+
+# Logs & coverage
+logs/
+.coverage
+coverage.xml
+
+# Local artifacts from handout (generated)
+handout_from DS_agent/model.joblib
+handout_from DS_agent/metrics.json
+handout_from DS_agent/submission.csv
