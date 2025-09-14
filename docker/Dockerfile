@@ -8,10 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install build essentials for scientific stack if needed (kept minimal here)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
- && rm -rf /var/lib/apt/lists/*
+# Keep image minimal; rely on wheels (no build tools needed)
 
 # Copy requirements and install
 COPY requirements.txt /app/requirements.txt
@@ -32,18 +29,11 @@ ENV HANDOUT_DIR=/app/handout_from\ DS_agent \
 
 EXPOSE 8000
 
+# Lightweight healthcheck using stdlib only (no extra deps)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s CMD \
-    python - << 'PY' || exit 1
-import os, sys, json
-import requests
-url=f"http://{os.environ.get('UVICORN_HOST','127.0.0.1')}:{os.environ.get('UVICORN_PORT','8000')}/healthz"
-try:
-    r=requests.get(url, timeout=2)
-    j=r.json(); assert j.get('status')=='ok'
-except Exception as e:
-    print('healthcheck failed', e)
-    raise
-PY
+    python -c "import os,urllib.request,json;\
+u=f'http://{os.environ.get('UVICORN_HOST','127.0.0.1')}:{os.environ.get('UVICORN_PORT','8000')}/healthz';\
+d=urllib.request.urlopen(u,timeout=2).read();\
+assert json.loads(d).get('status')=='ok'" || exit 1
 
 CMD ["python", "-m", "uvicorn", "service.app:app", "--host", "0.0.0.0", "--port", "8000"]
-

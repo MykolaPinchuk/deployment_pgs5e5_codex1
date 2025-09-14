@@ -1,0 +1,38 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.3.1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: docker/mlflow.Dockerfile
+    image: mlflow-local:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - BACKEND_STORE_URI=sqlite:///mlflow.db
+      - ARTIFACT_ROOT=/mlruns
+    volumes:
+      - ./mlruns:/mlruns
+    restart: unless-stopped
+

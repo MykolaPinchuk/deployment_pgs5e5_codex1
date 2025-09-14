@@ -1,23 +1,18 @@
-# Local Deployment — Streamed Model Serving (Iteration A)
+# Local Deployment — Streamed Model Serving
 
 This repo deploys the DS handout model (in `handout_from DS_agent/`) as a local FastAPI service with streamed requests, delayed feedback, and basic Prometheus metrics. The handout directory is not modified.
 
-## Prerequisites
-- Python 3.10+
-- (Optional) `make`
+Docs moved into `docs/`:
+- Iteration A: `docs/readme_a.md`
+- Iteration B: `docs/readme_b.md`
 
-## Setup
-1) Create a virtualenv and install dependencies:
+Quick links:
+- Validate A (no network): `make validate-a`
+- Validate B tests: `make test`
+- Docker build: `make docker-build`; bring up API: `make compose-up`
+- Observability stack (Prom, Grafana, MLflow): `make compose-up-observe`
 
-```
-make install
-```
-
-2) Train the model to produce `model.joblib` and `metrics.json` in the handout directory:
-
-```
-make train
-```
+See detailed instructions in the per-iteration docs.
 
 ## Validation Checklist (Pick A or B)
 
@@ -38,25 +33,12 @@ Option B — HTTP service + streaming (holdout, no leakage):
   - curl -sS http://127.0.0.1:8000/healthz returns {"status":"ok"}
   - /metrics shows infra and DS metrics while simulation runs
 
-## Run the Service
-
-Start the FastAPI service (uses half of your CPU threads by default):
-
-```
-make serve
-```
-
-Endpoints:
+Endpoints (service):
 - `GET /healthz` — liveness/readiness
 - `POST /predict` — single record per SCHEMA; returns `{id, Calories}`
 - `POST /feedback` — delayed ground truth `{id, Calories, ts?}`
 - `GET /metrics` — Prometheus text metrics (infra + DS rolling metrics)
-
-Environment variables (optional):
-- `HANDOUT_DIR` — path to handout directory (default: `./handout_from DS_agent`)
-- `MODEL_PATH` — path to `model.joblib` (default: `HANDOUT_DIR/model.joblib`)
-- `PREDICTION_WINDOW_SECONDS` — rolling metrics window (default: 300)
-- `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `XGBOOST_NUM_THREADS` — set to cap threads
+- `GET /info` — service, model, and env metadata
 
 ## Stream Simulation (Holdout, no leakage)
 
@@ -199,3 +181,11 @@ docker compose down -v --remove-orphans
 Notes:
 - CPU/thread caps are configurable via env: `API_CPUS`, `OMP_THREADS`.
 - The image bundles the handout and model; retrain locally and rebuild to update.
+
+Port already in use?
+- If `docker compose up` fails with `address already in use` on port 8000, either stop whatever is on port 8000 (e.g., a local `make serve`) or run Compose on a different host port:
+
+```
+HOST_PORT=8010 docker compose up -d
+curl -sS http://127.0.0.1:8010/healthz
+```

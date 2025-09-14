@@ -342,3 +342,59 @@ def metrics():
 @app.get("/")
 def root():
     return {"name": "Calories Prediction Service", "version": "0.1.0"}
+
+
+@app.get("/info")
+def info():
+    try:
+        import numpy as _np
+        import pandas as _pd
+        import sklearn as _sk
+        import xgboost as _xgb
+        import fastapi as _fa
+    except Exception:
+        _np = _pd = _sk = _xgb = _fa = None
+
+    # model stats
+    model_stats = {}
+    try:
+        st = os.stat(MODEL_PATH)
+        model_stats = {
+            "path": MODEL_PATH,
+            "size_bytes": int(st.st_size),
+            "mtime": st.st_mtime,
+        }
+    except FileNotFoundError:
+        model_stats = {"path": MODEL_PATH, "missing": True}
+
+    # metrics.json if present
+    metrics = None
+    metrics_path = os.path.join(HANDOUT_DIR, "metrics.json")
+    if os.path.exists(metrics_path):
+        try:
+            import json as _json
+            with open(metrics_path, "r") as f:
+                metrics = _json.load(f)
+        except Exception:
+            metrics = None
+
+    env = {
+        "MLFLOW_TRACKING_URI": os.environ.get("MLFLOW_TRACKING_URI"),
+        "GIT_SHA": os.environ.get("GIT_SHA"),
+    }
+
+    versions = {
+        "numpy": getattr(_np, "__version__", None),
+        "pandas": getattr(_pd, "__version__", None),
+        "scikit_learn": getattr(_sk, "__version__", None),
+        "xgboost": getattr(_xgb, "__version__", None),
+        "fastapi": getattr(_fa, "__version__", None),
+    }
+
+    return {
+        "service": {"name": "Calories Prediction Service", "version": "0.1.0"},
+        "model": model_stats,
+        "metrics_json": metrics,
+        "env": env,
+        "versions": versions,
+    }

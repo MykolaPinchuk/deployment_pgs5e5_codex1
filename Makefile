@@ -1,4 +1,4 @@
-.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a docker-build compose-up compose-down test
+.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a docker-build compose-up compose-down test train-mlflow compose-up-observe
 
 PY := python3
 PIP := pip3
@@ -6,6 +6,7 @@ PIP := pip3
 VENV := .venv
 VENVPY := $(VENV)/bin/python
 VENVPIP := $(VENV)/bin/pip
+URL ?= http://127.0.0.1:8000
 
 install:
 	python3 -m venv $(VENV)
@@ -35,11 +36,19 @@ serve:
 	$(VENVPY) -m uvicorn service.app:app --host 0.0.0.0 --port 8000
 
 simulate-stream: holdout
-	$(VENVPY) tools/sim_stream.py --url http://127.0.0.1:8000 --feedback-delay 10 --cycles 2 --burst-rps 20 --burst-duration 5 --idle-duration 10 --limit 200
+	$(VENVPY) tools/sim_stream.py --url $(URL) --feedback-delay 10 --cycles 2 --burst-rps 20 --burst-duration 5 --idle-duration 10 --limit 200
 
 validate-a:
 	PYTHONUNBUFFERED=1 timeout 60s $(VENVPY) tools/validate_iteration_a.py || true; \
 	 echo 'Logs:'; tail -n 100 logs/validate_iteration_a.log || true
+
+MLFLOW_TRACKING_URI ?= http://127.0.0.1:5000
+
+train-mlflow:
+	MLFLOW_TRACKING_URI=$(MLFLOW_TRACKING_URI) $(VENVPY) tools/train_mlflow.py --run-name local-train
+
+compose-up-observe:
+	docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build --force-recreate
 
 docker-build:
 	docker build -f docker/Dockerfile -t calories-api:local .

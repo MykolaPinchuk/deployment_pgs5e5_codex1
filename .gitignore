@@ -33,3 +33,7 @@ data/holdout/*.parquet
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+
+# MLflow local store
+mlruns/
+mlflow.db
