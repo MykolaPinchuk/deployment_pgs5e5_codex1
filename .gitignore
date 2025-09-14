@@ -18,8 +18,18 @@ dist/
 logs/
 .coverage
 coverage.xml
+pytest.debug.log
 
 # Local artifacts from handout (generated)
 handout_from DS_agent/model.joblib
 handout_from DS_agent/metrics.json
 handout_from DS_agent/submission.csv
+
+# Generated data
+data/holdout/*.csv
+data/holdout/*.parquet
+
+# Type checkers & misc caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/

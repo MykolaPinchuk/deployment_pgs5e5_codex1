@@ -1,4 +1,4 @@
-.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a
+.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a docker-build compose-up compose-down test
 
 PY := python3
 PIP := pip3
@@ -40,3 +40,15 @@ simulate-stream: holdout
 validate-a:
 	PYTHONUNBUFFERED=1 timeout 60s $(VENVPY) tools/validate_iteration_a.py || true; \
 	 echo 'Logs:'; tail -n 100 logs/validate_iteration_a.log || true
+
+docker-build:
+	docker build -f docker/Dockerfile -t calories-api:local .
+
+compose-up:
+	docker compose up --build -d
+
+compose-down:
+	docker compose down -v --remove-orphans
+
+test:
+	$(VENVPY) -m pytest -q
