@@ -1,4 +1,4 @@
-.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a docker-build compose-up compose-down test train-mlflow compose-up-observe
+.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a docker-build compose-up compose-down compose-down-observe test train-mlflow compose-up-observe k8s-up k8s-status k8s-context k8s-build-img k8s-apply k8s-delete k8s-port-forward k8s-port-forward-bg k8s-port-forward-stop k8s-restart
 
 PY := python3
 PIP := pip3
@@ -49,6 +49,65 @@ train-mlflow:
 
 compose-up-observe:
 	docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build --force-recreate
+
+compose-down-observe:
+	docker compose -f docker-compose.yml -f docker-compose.observability.yml down -v --remove-orphans
+
+# Kubernetes / Minikube
+K8S_NS ?= calories
+HOST_PORT ?= 8000
+
+k8s-status:
+	minikube status || true
+
+k8s-up:
+	# Start minikube if not running; do not change CPU/memory on existing cluster
+	@if ! minikube status | grep -q "host: Running"; then \
+		echo "Starting Minikube..."; \
+		minikube start --driver=docker; \
+	else \
+		echo "Minikube already running"; \
+	fi
+
+k8s-restart:
+	minikube stop || true
+	minikube start --driver=docker
+
+k8s-context:
+	kubectl config use-context minikube
+
+k8s-build-img:
+	# Build and load the API image into Minikube
+	docker build -f docker/Dockerfile -t calories-api:local .
+	minikube image load calories-api:local
+
+k8s-apply:
+	# Ensure cluster is up before applying
+	$(MAKE) k8s-up
+	$(MAKE) k8s-context
+	kubectl apply -f k8s/namespace.yaml
+	kubectl apply -f k8s/configmap.yaml
+	kubectl apply -f k8s/deployment.yaml
+	kubectl apply -f k8s/service.yaml
+	kubectl apply -f k8s/hpa.yaml || true
+
+k8s-delete:
+	kubectl delete -f k8s/hpa.yaml --ignore-not-found
+	kubectl delete -f k8s/service.yaml --ignore-not-found
+	kubectl delete -f k8s/deployment.yaml --ignore-not-found
+	kubectl delete -f k8s/configmap.yaml --ignore-not-found
+	kubectl delete -f k8s/namespace.yaml --ignore-not-found
+
+k8s-port-forward:
+	kubectl -n $(K8S_NS) port-forward svc/api $(HOST_PORT):8000
+
+k8s-port-forward-bg:
+	@mkdir -p logs
+	@echo "Starting kubectl port-forward in background (logs/log_kpf.txt, PID in .kpf.pid)"
+	@nohup kubectl -n $(K8S_NS) port-forward svc/api $(HOST_PORT):8000 > logs/log_kpf.txt 2>&1 & echo $$! > .kpf.pid; sleep 1; tail -n 5 logs/log_kpf.txt || true
+
+k8s-port-forward-stop:
+	@[ -f .kpf.pid ] && kill $$(cat .kpf.pid) && rm -f .kpf.pid && echo "Stopped background port-forward" || echo "No background port-forward PID file found"
 
 docker-build:
 	docker build -f docker/Dockerfile -t calories-api:local .

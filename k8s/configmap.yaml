@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: calories
+data:
+  HANDOUT_DIR: "/app/handout_from DS_agent"
+  MODEL_PATH: "/app/handout_from DS_agent/model.joblib"
+  OMP_NUM_THREADS: "2"
+  MKL_NUM_THREADS: "2"
+  XGBOOST_NUM_THREADS: "2"
+  UVICORN_PORT: "8000"
+

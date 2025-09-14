@@ -19,6 +19,7 @@ logs/
 .coverage
 coverage.xml
 pytest.debug.log
+.kpf.pid
 
 # Local artifacts from handout (generated)
 handout_from DS_agent/model.joblib
