@@ -13,7 +13,8 @@ def parse_args():
     here = os.path.dirname(__file__)
     root = os.path.abspath(os.path.join(here, os.pardir))
     handout_dir = os.path.join(root, "handout_from DS_agent")
-    default_data = os.path.join(handout_dir, "data_sample", "train.csv")
+    # Default to derived holdout set outside the handout dir
+    default_data = os.path.join(root, "data", "holdout", "holdout.csv")
     p = argparse.ArgumentParser()
     p.add_argument("--url", default="http://127.0.0.1:8000")
     p.add_argument("--data", default=default_data)
@@ -94,6 +95,8 @@ async def burst_cycle(client: httpx.AsyncClient, base_url: str, df: pd.DataFrame
 
 async def main_async():
     args = parse_args()
+    if not os.path.exists(args.data):
+        raise SystemExit(f"Simulator data not found at {args.data}. Generate holdout via: make holdout")
     df = pd.read_csv(args.data)
     if args.limit > 0:
         df = df.iloc[: args.limit].copy()
@@ -126,4 +129,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

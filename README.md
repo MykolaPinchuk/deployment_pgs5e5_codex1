@@ -39,9 +39,21 @@ Environment variables (optional):
 - `PREDICTION_WINDOW_SECONDS` — rolling metrics window (default: 300)
 - `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `XGBOOST_NUM_THREADS` — set to cap threads
 
-## Stream Simulation
+## Stream Simulation (Holdout, no leakage)
 
-The simulator streams records from `handout_from DS_agent/data_sample/train.csv`, sends predictions to `/predict`, and then sends ground-truth feedback to `/feedback` after a delay. Bursty cycles are supported.
+The simulator streams records from a derived holdout set outside the handout directory (`data/holdout/holdout.csv`), sends predictions to `/predict`, and then sends ground-truth feedback to `/feedback` after a delay. Bursty cycles are supported.
+
+First, generate the holdout files (default 500 rows for holdout, rest for training):
+
+```
+make holdout
+```
+
+Optional: train without holdout leakage by pointing training to the derived data folder:
+
+```
+make train-wo-holdout
+```
 
 Run a short demo simulation (10s feedback delay for quick validation):
 
@@ -49,12 +61,12 @@ Run a short demo simulation (10s feedback delay for quick validation):
 make simulate-stream
 ```
 
-Or run manually with custom parameters:
+Or run manually with custom parameters (point `--data` to your holdout file):
 
 ```
 .venv/bin/python tools/sim_stream.py \
   --url http://127.0.0.1:8000 \
-  --data "handout_from DS_agent/data_sample/train.csv" \
+  --data "data/holdout/holdout.csv" \
   --limit 300 \
   --feedback-delay 300 \
   --cycles 3 \
@@ -73,6 +85,32 @@ Or run manually with custom parameters:
 - `Model artifact not found`: run `make train` first to create `model.joblib`.
 - Import/serialization errors: ensure the handout dir exists and is readable; the service adds it to `sys.path` so the artifact can deserialize.
 - High CPU usage: thread caps are set to half your CPU threads by default; tune env vars if needed.
+ - Connection errors during `make simulate-stream`: ensure `make serve` is running in another terminal, confirm the URL/port (`--url`), and check for firewall restrictions. If HTTP is blocked in your environment, use `make validate-a` instead.
+
+## /predict Examples
+
+Example curl request with a valid payload. The `id` is a client-provided identifier that will be echoed back and used to correlate later feedback.
+
+```
+curl -sS -X POST http://127.0.0.1:8000/predict \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id": 123,
+    "Gender": "male",
+    "Age": 25,
+    "Height": 180,
+    "Weight": 75,
+    "Duration": 30,
+    "Heart_Rate": 120,
+    "Body_Temp": 37.0
+  }'
+```
+
+Sample response:
+
+```
+{"id": 123, "Calories": 198.42}
+```
 
 ## Next Iterations
 - Iteration B will add packaging, unit tests, Docker, and Compose with `/metrics` exposed.
@@ -107,5 +145,7 @@ Notes:
 - Install: `make install`
 - Train: `make train`
 - Validate (no network): `make validate-a`
-- Serve (optional): `make serve`
-- Stream simulate (optional): `make simulate-stream`
+- Serve: `make serve`
+- Holdout (no leakage): `make holdout`
+- Train without holdout: `make train-wo-holdout`
+- Stream simulate: `make simulate-stream`

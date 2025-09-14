@@ -1,4 +1,4 @@
-.PHONY: install train predict serve simulate-stream validate-a
+.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a
 
 PY := python3
 PIP := pip3
@@ -15,6 +15,14 @@ install:
 train:
 	$(VENVPY) "handout_from DS_agent/train.py"
 
+holdout:
+	mkdir -p data/holdout
+	$(VENVPY) tools/make_holdout.py --size 500
+
+train-wo-holdout: holdout
+	# Train using the derived train.csv without holdout rows
+	$(VENVPY) "handout_from DS_agent/train.py" --data-dir "$(PWD)/data/holdout"
+
 predict:
 	$(VENVPY) "handout_from DS_agent/predict.py"
 
@@ -26,7 +34,7 @@ serve:
 	XGBOOST_NUM_THREADS=$$(python3 -c 'import os;print(max(1,(os.cpu_count() or 2)//2))') \
 	$(VENVPY) -m uvicorn service.app:app --host 0.0.0.0 --port 8000
 
-simulate-stream:
+simulate-stream: holdout
 	$(VENVPY) tools/sim_stream.py --url http://127.0.0.1:8000 --feedback-delay 10 --cycles 2 --burst-rps 20 --burst-duration 5 --idle-duration 10 --limit 200
 
 validate-a:
