@@ -1,4 +1,4 @@
-.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a docker-build compose-up compose-down compose-down-observe test train-mlflow compose-up-observe k8s-up k8s-status k8s-context k8s-build-img k8s-apply k8s-delete k8s-port-forward k8s-port-forward-bg k8s-port-forward-stop k8s-restart
+.PHONY: install train train-wo-holdout holdout predict serve simulate-stream validate-a docker-build compose-up compose-down compose-down-observe test train-mlflow compose-up-observe k8s-up k8s-status k8s-context k8s-build-img k8s-apply k8s-delete k8s-port-forward k8s-port-forward-bg k8s-port-forward-stop k8s-restart stress-local stress-k8s stress-asgi
 
 PY := python3
 PIP := pip3
@@ -37,6 +37,16 @@ serve:
 
 simulate-stream: holdout
 	$(VENVPY) tools/sim_stream.py --url $(URL) --feedback-delay 10 --cycles 2 --burst-rps 20 --burst-duration 5 --idle-duration 10 --limit 200
+
+stress-local:
+	$(VENVPY) tools/stress_burst.py --url $(URL) --duration 60 --rps 150 --concurrency 64
+
+stress-k8s:
+	@if [ -z "$(HOST_PORT)" ]; then echo "Set HOST_PORT to your forwarded host port (e.g., HOST_PORT=8010)"; exit 1; fi
+	$(VENVPY) tools/stress_burst.py --url http://127.0.0.1:$(HOST_PORT) --duration 120 --rps 200 --concurrency 96
+
+stress-asgi:
+	$(VENVPY) tools/stress_burst.py --asgi --duration 10 --rps 50 --concurrency 16
 
 validate-a:
 	PYTHONUNBUFFERED=1 timeout 60s $(VENVPY) tools/validate_iteration_a.py || true; \
